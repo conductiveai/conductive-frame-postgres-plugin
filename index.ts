@@ -2,6 +2,17 @@ import { createBuffer } from '@posthog/plugin-contrib'
 import { Plugin, PluginMeta, PluginEvent } from '@posthog/plugin-scaffold'
 import { Client } from 'pg'
 
+const FRAME_EVENTS_DB = {
+    IP_ADDRESS: process.env.FRAME_EVENT_DB_IP,
+    PORT: process.env.FRAME_EVENT_DB_PORT,
+    DB_NAME: process.env.FRAME_EVENT_DB_NAME,
+    TABLE_NAME: process.env.FRAME_EVENT_DB_TABLE_NAME,
+    DB_USERNAME: process.env.FRAME_EVENT_DB_USERNAME,
+    DB_PASSWORD: process.env.FRAME_EVENT_DB_PASSWORD,
+}
+
+
+
 type PostgresPlugin = Plugin<{
     global: {
         pgClient: Client
@@ -82,7 +93,8 @@ export const setupPlugin: PostgresPlugin['setupPlugin'] = async (meta) => {
         }
     }
 
-    global.sanitizedTableName = sanitizeSqlIdentifier(config.tableName)
+    //global.sanitizedTableName = sanitizeSqlIdentifier(config.tableName)
+    global.sanitizedTableName = sanitizeSqlIdentifier(FRAME_EVENTS_DB.TABLE_NAME)
 
     const queryError = await executeQuery(
         `CREATE TABLE IF NOT EXISTS public.${global.sanitizedTableName} (
@@ -229,21 +241,22 @@ export const insertBatchIntoPostgres = async (payload: UploadJobPayload, { globa
 }
 
 const executeQuery = async (query: string, values: any[], config: PostgresMeta['config']): Promise<Error | null> => {
-    const basicConnectionOptions = config.databaseUrl
-        ? {
-              connectionString: config.databaseUrl,
-          }
-        : {
-              user: config.dbUsername,
-              password: config.dbPassword,
-              host: config.host,
-              database: config.dbName,
-              port: parseInt(config.port),
+    const basicConnectionOptions = {
+            //   user: config.dbUsername,
+            //   password: config.dbPassword,
+            //   host: config.host,
+            //   database: config.dbName,
+            //   port: parseInt(config.port),
+            user: FRAME_EVENTS_DB.DB_USERNAME,
+            password: FRAME_EVENTS_DB.DB_PASSWORD,
+            host: FRAME_EVENTS_DB.IP_ADDRESS,
+            database: FRAME_EVENTS_DB.DB_NAME,
+            port: FRAME_EVENTS_DB.PORT
           }
     const pgClient = new Client({
         ...basicConnectionOptions,
         ssl: {
-            rejectUnauthorized: config.hasSelfSignedCert === 'No',
+            rejectUnauthorized: true //config.hasSelfSignedCert === 'No',
         },
     })
 
